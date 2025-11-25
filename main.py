@@ -105,6 +105,7 @@ mqtt_client: Optional[mqtt.Client] = None
 atv: Optional[AppleTV] = None
 shutdown_event: Optional[asyncio.Event] = None
 command_queue: Optional[asyncio.Queue] = None
+main_loop: Optional[asyncio.AbstractEventLoop] = None
 
 
 # =============================================================================
@@ -158,11 +159,11 @@ def on_mqtt_message(client, userdata, msg):
         payload = msg.payload.decode('utf-8')
         logger.debug(f"MQTT message received on {msg.topic}: {payload}")
 
-        if command_queue:
+        if command_queue and main_loop:
             # Put command in queue for async processing
             asyncio.run_coroutine_threadsafe(
                 command_queue.put({'topic': msg.topic, 'payload': payload}),
-                asyncio.get_event_loop()
+                main_loop
             )
     except Exception as e:
         logger.error(f"Error processing MQTT message: {e}")
@@ -515,7 +516,7 @@ async def task_command_handler():
 
 async def main():
     """Main application entry point."""
-    global config, logger, mqtt_client, shutdown_event, command_queue
+    global config, logger, mqtt_client, shutdown_event, command_queue, main_loop
 
     # Load configuration
     config = Config()
@@ -530,8 +531,11 @@ async def main():
     shutdown_event = asyncio.Event()
     command_queue = asyncio.Queue()
 
+    # Store main event loop for cross-thread access
+    main_loop = asyncio.get_running_loop()
+
     # Setup signal handlers
-    loop = asyncio.get_event_loop()
+    loop = main_loop
 
     def signal_handler(sig):
         logger.info(f"Received signal {sig}, shutting down...")
