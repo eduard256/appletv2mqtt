@@ -303,8 +303,15 @@ async def get_state() -> dict:
         state['total_time'] = playing.total_time
         state['repeat'] = str(playing.repeat).split('.')[-1] if playing.repeat else None
         state['shuffle'] = str(playing.shuffle).split('.')[-1] if playing.shuffle else None
-        state['app'] = playing.app
-        state['app_id'] = playing.app_id
+
+        # Get current app (separate API call, not part of Playing object)
+        try:
+            app = atv.metadata.app
+            state['app'] = app.name if app else None
+            state['app_id'] = app.identifier if app else None
+        except Exception:
+            state['app'] = None
+            state['app_id'] = None
 
         # Get power state
         if hasattr(atv, 'power') and atv.power:
