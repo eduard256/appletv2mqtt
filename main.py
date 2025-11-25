@@ -29,7 +29,7 @@ class Config:
 
     REQUIRED_VARS = [
         'MQTT_HOST', 'MQTT_PORT', 'MQTT_USER', 'MQTT_PASSWORD', 'MQTT_QOS', 'MQTT_BASE_TOPIC',
-        'APPLETV_ID', 'APPLETV_CREDENTIALS', 'APPLETV_ADDRESS',
+        'APPLETV_ID', 'APPLETV_ADDRESS',
         'STATE_UPDATE_INTERVAL', 'APPS_UPDATE_INTERVAL',
         'MQTT_RECONNECT_DELAY', 'APPLETV_RECONNECT_DELAY',
         'LOG_LEVEL'
@@ -60,8 +60,9 @@ class Config:
 
         # Apple TV settings
         self.appletv_id = os.getenv('APPLETV_ID')
-        self.appletv_credentials = os.getenv('APPLETV_CREDENTIALS')
         self.appletv_address = os.getenv('APPLETV_ADDRESS')
+        self.appletv_credentials_companion = os.getenv('APPLETV_CREDENTIALS_COMPANION', '')
+        self.appletv_credentials_airplay = os.getenv('APPLETV_CREDENTIALS_AIRPLAY', '')
 
         # Intervals
         self.state_update_interval = int(os.getenv('STATE_UPDATE_INTERVAL'))
@@ -248,10 +249,15 @@ async def connect_appletv() -> Optional[AppleTV]:
 
             atv_config = atvs[0]
 
-            # Set credentials
-            protocol, credentials = config.appletv_credentials.split(':', 1)
-            protocol_enum = Protocol[protocol.upper()] if hasattr(Protocol, protocol.upper()) else Protocol.Companion
-            atv_config.set_credentials(protocol_enum, credentials)
+            # Set credentials for Companion protocol
+            if config.appletv_credentials_companion:
+                atv_config.set_credentials(Protocol.Companion, config.appletv_credentials_companion)
+                logger.info("  Companion credentials set")
+
+            # Set credentials for AirPlay protocol
+            if config.appletv_credentials_airplay:
+                atv_config.set_credentials(Protocol.AirPlay, config.appletv_credentials_airplay)
+                logger.info("  AirPlay credentials set")
 
             # Connect
             atv = await pyatv.connect(atv_config, asyncio.get_event_loop())
