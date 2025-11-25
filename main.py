@@ -487,7 +487,7 @@ async def task_command_handler():
 
             # Handle set commands
             if topic == config.topic_set:
-                action = data.get('action')
+                action = data.pop('action', None)
                 if action:
                     await execute_command(action, **data)
 
